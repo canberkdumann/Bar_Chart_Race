@@ -1,0 +1,30 @@
+.qv-object-simplescatterplot div.qv-object-content-container {
+    font: 10px sans-serif;
+}
+
+.qv-object-simplescatterplot .axis path,
+.qv-object-simplescatterplot .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.qv-object-simplescatterplot .dot {
+    stroke: #000;
+}
+
+/* Bar chart styling */
+.bar {
+    fill-opacity: 0.8;
+    stroke: none;
+}
+
+/* Text inside the bars */
+.bar-label {
+    fill: #000;
+    font-size: 10px;
+    font-weight: bold;
+    text-anchor: middle;
+    alignment-baseline: middle;
+    margin: 1px; 
+}
