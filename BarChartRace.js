@@ -43,7 +43,7 @@ define(["jquery", "text!./BarChartRace.css", "./d3.min"], function ($, cssConten
         },
         qOtherTotalSpec: {
             qOtherMode: "OTHER_COUNTED",
-            qOtherCounted: { qv: "10" }, // ✅ LIMIT to Top 10 competitors
+            qOtherCounted: { qv: "15" }, // ✅ LIMIT to Top 10 competitors
             qSuppressOther: true
         }
     },
@@ -90,6 +90,11 @@ define(["jquery", "text!./BarChartRace.css", "./d3.min"], function ($, cssConten
     };
 });
 var viz = function (data, width, height, id) {
+let lastCalendarDate = "";
+let isAnimating = false; // ⛔️ Eğer bu true ise yeni animasyon başlatma
+
+
+
     var margin = { top: 20, right: 200, bottom: 50, left: 20 }, // Sağ tarafı geniş tuttuk
         innerWidth = width - margin.left - margin.right,
         innerHeight = height - margin.top - margin.bottom;
@@ -140,6 +145,8 @@ var viz = function (data, width, height, id) {
     var interval = 3000;
     var isPlaying = true;
     var intervalId;
+	var hasEnded = false; 
+
 
     var controls = svg.append("g")
         .attr("class", "controls")
@@ -148,13 +155,26 @@ var viz = function (data, width, height, id) {
     var playGroup = controls.append("g")
         .attr("class", "play-group")
         .style("cursor", "pointer")
-        .on("click", function () {
-            isPlaying = !isPlaying;
-            playText.text(isPlaying ? "Pause" : "Play");
-            playButton.attr("fill", isPlaying ? "#F44336" : "#4CAF50");
-            if (isPlaying) animate();
-            else clearTimeout(intervalId);
-        });
+.on("click", function () {
+    if (hasEnded) {
+        // ✅ If race is finished, restart everything
+        currentDateIndex = 0;
+        hasEnded = false;
+        isPlaying = true;
+        playText.text("Pause");
+        playButton.attr("fill", "#F44336");
+        animate();
+    } else {
+        // Toggle pause/play
+        isPlaying = !isPlaying;
+        playText.text(isPlaying ? "Pause" : "Play");
+        playButton.attr("fill", isPlaying ? "#F44336" : "#4CAF50");
+        if (isPlaying) animate();
+        else clearTimeout(intervalId);
+    }
+});
+		
+		
 
     var playButton = playGroup.append("rect")
         .attr("width", 75)
@@ -210,37 +230,105 @@ var viz = function (data, width, height, id) {
 
     rankingBox.append("rect")
         .attr("width", 160)
-        .attr("height", innerHeight - rankingBoxY)
+        .attr("height", 350) 
         .attr("fill", "white")
         .attr("stroke", "black")
         .attr("stroke-width", 2)
         .attr("rx", 10);
 
-    var dateText = svg.append("text")
-        .attr("class", "date-text")
-        .attr("x", innerWidth + 80)
-        .attr("y", innerHeight + 45)
-        .attr("text-anchor", "middle")
-        .style("fill", "black")
-        .style("font-size", "18px")
-        .style("font-weight", "bold");
+ // ✅ Yeni takvim görünümü (spiralli sayfa)
+// ✅ Updated: Bigger calendar view (1.5x larger)
+var calendarGroup = svg.append("g")
+    .attr("class", "calendar-group")
+    .attr("transform", `translate(${innerWidth + 30}, ${innerHeight - 150})`);
+
+// Spiral holes (updated position)
+calendarGroup.append("path")
+    .attr("d", "M19,-13 a6,6 0 1,0 0.1,0 M110,-13 a6,6 0 1,0 0.1,0")
+    .attr("fill", "none")
+    .attr("stroke", "#666")
+    .attr("stroke-width", 3);
+
+// Drop shadow
+var defs = svg.append("defs");
+var filter = defs.append("filter")
+    .attr("id", "shadow")
+    .attr("x", "-20%")
+    .attr("y", "-20%")
+    .attr("width", "140%")
+    .attr("height", "140%");
+filter.append("feDropShadow")
+    .attr("dx", 3)
+    .attr("dy", 3)
+    .attr("stdDeviation", 3)
+    .attr("flood-color", "rgba(0,0,0,0.3)");
+
+// Bigger paper with shadow
+calendarGroup.append("rect")
+    .attr("class", "calendar-sheet")
+    .attr("width", 140)       // ⬅️ Wider
+    .attr("height", 90)       // ⬅️ Taller
+    .attr("rx", 16)
+    .attr("fill", "url(#paperGradient)")
+    .attr("stroke", "#ccc")
+    .attr("stroke-width", 2)
+    .style("filter", "url(#shadow)")
+    .style("transform-origin", "center top")
+    .style("transform-box", "fill-box");
+
+// Gradient (no change)
+defs.append("linearGradient")
+    .attr("id", "paperGradient")
+    .attr("x1", "0%").attr("y1", "0%")
+    .attr("x2", "0%").attr("y2", "100%")
+    .selectAll("stop")
+    .data([
+        { offset: "0%", color: "#fffdf7" },
+        { offset: "100%", color: "#f4f1e9" }
+    ])
+    .enter()
+    .append("stop")
+    .attr("offset", d => d.offset)
+    .attr("stop-color", d => d.color);
+
+// Hole shadows (updated position)
+calendarGroup.append("circle")
+    .attr("cx", 25)
+    .attr("cy", 0)
+    .attr("r", 6)
+    .attr("fill", "#444");
+
+calendarGroup.append("circle")
+    .attr("cx", 115)
+    .attr("cy", 0)
+    .attr("r", 6)
+    .attr("fill", "#444");
+
+// Updated text (bigger & re-centered)
+var calendarText = calendarGroup.append("text")
+    .attr("class", "calendar-text")
+    .attr("x", 70)              // ⬅️ Centered for 140 width
+    .attr("y", 52)
+    .attr("text-anchor", "middle")
+    .style("font-size", "20px") // ⬅️ Bigger font
+    .style("font-family", "Georgia, serif")
+    .style("font-weight", "bold")
+    .style("fill", "#2c2c2c");
+
 
 function updateChart(date) {
+   if (date === lastCalendarDate || isAnimating) return;
+    isAnimating = true;
+
     var filteredData = data.filter(d => d.Date === date);
-
-    // 🔥 Sort by measure value (descending)
     filteredData.sort((a, b) => b.Metric1 - a.Metric1);
-
-    // 📌 Show only top 10
-    filteredData = filteredData.slice(0, 10);
+    filteredData = filteredData.slice(0, 15);
 
     var names = filteredData.map(d => d.Dim1);
     y.domain(names);
 
-    // ✅ Bind data to bar groups (keyed by Dim1)
     var bars = svg.selectAll(".bar-group").data(filteredData, d => d.Dim1);
 
-    // ✅ ENTER new bar groups
     var barsEnter = bars.enter().append("g")
         .attr("class", "bar-group")
         .attr("transform", d => `translate(0, ${y(d.Dim1)})`);
@@ -248,11 +336,10 @@ function updateChart(date) {
     barsEnter.append("rect")
         .attr("class", "bar")
         .attr("height", y.rangeBand())
-        .attr("width", d => x(Math.min(d.Metric1, 1.5))) // ✅ Initial width set immediately
+        .attr("width", d => x(Math.min(d.Metric1, 1.5)))
         .attr("fill", (d, i) => colorScale(i % pastelColors.length))
         .attr("fill-opacity", 0.9);
 
-    // ✅ Dimension label inside bar (moves with bar)
     barsEnter.append("text")
         .attr("class", "bar-label-left")
         .attr("x", d => x(Math.min(d.Metric1, 1.5)) - 10)
@@ -267,7 +354,6 @@ function updateChart(date) {
             return words.length === 3 ? words[0] : words.length >= 4 ? words.slice(0, 2).join(" ") : d.Dim1;
         });
 
-    // ✅ Measure value label
     barsEnter.append("text")
         .attr("class", "bar-value-label")
         .attr("x", d => x(Math.min(d.Metric1, 1.5)) + 5)
@@ -278,7 +364,6 @@ function updateChart(date) {
         .style("font-weight", "bold")
         .text(d => d.Metric1.toFixed(2));
 
-    // ✅ UPDATE existing bars (position & size)
     bars.transition()
         .duration(2500)
         .ease("linear")
@@ -289,7 +374,6 @@ function updateChart(date) {
         .ease("linear")
         .attr("width", d => x(Math.min(d.Metric1, 1.5)));
 
-    // ✅ UPDATE labels (dimension name)
     bars.select(".bar-label-left")
         .transition()
         .duration(2500)
@@ -300,7 +384,6 @@ function updateChart(date) {
             return words.length === 3 ? words[0] : words.length >= 4 ? words.slice(0, 2).join(" ") : d.Dim1;
         });
 
-    // ✅ UPDATE measure value label
     bars.select(".bar-value-label")
         .transition()
         .duration(2500)
@@ -308,50 +391,100 @@ function updateChart(date) {
         .attr("x", d => x(Math.min(d.Metric1, 1.5)) + 5)
         .text(d => d.Metric1.toFixed(2));
 
-    // ✅ EXIT old bars
     bars.exit()
         .transition()
         .duration(1000)
         .style("opacity", 0)
         .remove();
 
-    // ✅ Update right-side ranking box
     rankingBox.selectAll(".ranking-text").remove();
 
-    rankingBox.selectAll(".ranking-text")
-        .data(filteredData)
-        .enter()
-        .append("text")
-        .attr("class", "ranking-text")
-        .attr("x", 10)
-        .attr("y", (d, i) => (i + 1) * 20)
-        .style("fill", "black")
-        .style("font-size", "14px")
-        .style("font-weight", "bold")
-        .html((d, i) => {
-            let words = d.Dim1.split(" ");
-            let shortName = words.length === 3 ? words[0] :
-                words.length >= 4 ? words.slice(0, 2).join(" ") :
-                d.Dim1;
-            return `<tspan style="fill:red">${i + 1}.</tspan> ${shortName}`;
+
+// ✅ Dynamically adjust height of ranking box
+rankingBox.select("rect")
+    .transition()
+    .duration(500)
+    .attr("height", filteredData.length * 20 + 20); // 20px per item + padding
+
+rankingBox.selectAll(".ranking-text")
+    .data(filteredData)
+    .enter()
+    .append("text")
+    .attr("class", "ranking-text")
+    .attr("x", 10)
+    .attr("y", (d, i) => (i + 1) * 20)
+    .style("fill", "black")
+    .style("font-size", "14px")
+    .style("font-weight", "bold")
+    .html((d, i) => {
+        let words = d.Dim1.split(" ");
+        let shortName = words.length === 3 ? words[0] :
+            words.length >= 4 ? words.slice(0, 2).join(" ") :
+            d.Dim1;
+
+        let medal = "";
+        if (i === 0) medal = " 🥇";
+        else if (i === 1) medal = " 🥈";
+        else if (i === 2) medal = " 🥉";
+
+        return `<tspan style="fill:red">${i + 1}.</tspan> ${shortName}${medal}`;
+    });
+
+
+
+    // ✅ Clear text before spiral
+    calendarText.text("");
+
+    // ✅ Animate spiral effect
+    calendarGroup.select(".calendar-sheet")
+        .transition()
+        .duration(300)
+        .style("transform", "rotateX(90deg)")
+        .transition()
+        .delay(300)
+        .duration(300)
+        .style("transform", "rotateX(0deg)")
+        .each("end", function () {
+            // ✅ Update text *after* animation ends
+            calendarText
+                .style("opacity", 0)
+                .transition()
+                .duration(400)
+                .style("opacity", 1)
+                .tween("text", function () {
+                    var that = d3.select(this);
+                    var i = d3.interpolateString(that.text(), date);
+                    return function (t) {
+                        that.text(i(t));
+                    };
+                });
+
+            // ✅ Finalize
+            lastCalendarDate = date;
+            isAnimating = false;
         });
 
-    // ✅ Update current date text (bottom-right)
-    dateText.text(date);
 }
 
 
 
-
-
-
-    function animate() {
-        if (isPlaying && currentDateIndex < allDates.length) {
-            updateChart(allDates[currentDateIndex]);
-            currentDateIndex++;
-            intervalId = setTimeout(animate, interval);
-        }
+function animate() {
+    if (isPlaying && currentDateIndex < allDates.length && !isAnimating) {
+        updateChart(allDates[currentDateIndex]);
+        currentDateIndex++;
+        intervalId = setTimeout(animate, interval);
+    } else if (currentDateIndex >= allDates.length) {
+        // ✅ Race has ended — update button to "Restart"
+        hasEnded = true;
+        isPlaying = false;
+        playText.text("Restart");
+        playButton.attr("fill", "#607D8B");
+    } else {
+        intervalId = setTimeout(animate, 100); // retry if paused or animating
     }
+}
+
+
 
     animate();
 };
