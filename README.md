@@ -1,1 +1,1 @@
-![bar chart](https://github.com/user-attachments/assets/ff7d438c-1daa-4099-b16d-56a1f5259bf8)
+![bar_chart_image](https://github.com/user-attachments/assets/1c7a266c-407e-4196-8a3f-f2df47a2283f)
