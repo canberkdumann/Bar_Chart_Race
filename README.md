@@ -1,1 +1,2 @@
-![bar_chart_image](https://github.com/user-attachments/assets/1c7a266c-407e-4196-8a3f-f2df47a2283f)
+
+![Bar Chart Raceee](https://github.com/user-attachments/assets/4633263d-a537-4829-b3a5-b6448d52ea1c)
